@@ -1,0 +1,27 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local guide notes
+.guide/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Data: keep the folder tree, do not upload the files inside
+data/**
+!data/**/
+!data/**/.gitkeep
+
+# Checkpoints and run logs (generated, too large for GitHub)
+models/**
+!models/
+!models/.gitkeep
+logs/**
+!logs/
+!logs/.gitkeep
