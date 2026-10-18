@@ -1,12 +1,12 @@
 # Lokum
 
-Lokum is a small Turkish language model I trained from scratch on my own machine, an RTX 4090 with 24 GB, over a few days. I wanted to see how far one GPU and a short schedule could get: a tokenizer, a pretrain, supervised fine-tuning, a reward head, DPO, PPO, and GRPO, then a look at whether any of that produced a model that can answer a Turkish grade-school question.
+**Lokum** is a small Turkish language model I trained from scratch on my own machine, an RTX 4090, over a few days. I wanted to see how far one GPU and a short schedule could get: a tokenizer, a pretrain, supervised fine-tuning, a reward head, DPO, PPO, and GRPO, then a look at whether any of that produced a model that can answer a Turkish grade-school question.
 
-The network is about **163.6 million parameters** (163,618,560 with tied embeddings). The code in this repository is the trainer. The token files and the checkpoints stay on disk; they are too large for git, and several of the source datasets carry their own licenses.
+The network is about **163 million parameters**. The code in this repository is the trainer. The token files and the checkpoints stay on disk; they are too large for git, and several of the source datasets carry their own licenses.
 
 ## Where the design came from
 
-Two public repos set the outline. Neither one is a dependency, and neither one is copied into this tree.
+Two public repos set the outline. Neither one is a dependency, and neither one is directly copied into this tree.
 
 - [ufakai/ufakzeka](https://github.com/ufakai/ufakzeka) is the data list and the shape of the network: 24 layers, width 768, 12 query heads and 4 key/value heads, SwiGLU hidden size 2048, RoPE. It does not ship the corpus, and it does not ship this trainer.
 - [FareedKhan-dev/train-llm-from-scratch](https://github.com/FareedKhan-dev/train-llm-from-scratch) is the map of the stages: data, a 2017-style block, a modern block, pretrain, generation, supervised fine-tuning, a reward model, DPO, PPO, GRPO, and eval.
@@ -26,8 +26,6 @@ Two public repos set the outline. Neither one is a dependency, and neither one i
 | Pretrain tokens | 3,000,000,291 train, 14,330,767 validation, in `data/lokum/train.h5` and `val.h5` |
 | Optimizer | AdamW, cosine decay, learning rate `3e-4` down to `3e-5`, 100 warmup steps, weight decay 0.1, grad clip 1.0 |
 | Pretrain batch | microbatch 4, sequence 1024, grad accumulation 128 (524,288 tokens/step), 6,000 steps, bfloat16 on CUDA |
-
-Chat turns are ordinary text, not extra vocabulary rows. The markers live in `lokum/chat_template.py`: `<|user|>`, `<|assistant|>`, `<think>`, `</think>`, `<answer>`, `</answer>`.
 
 ## Datasets
 
@@ -96,21 +94,14 @@ The real test is `data/lokum/rl_prompts_test.jsonl`: 175 questions, every 50th r
 | `models/ppo.pt` | 1 / 175 | 0.6% |
 | `models/grpo.pt` | 4 / 175 | 2.3% |
 
-This matches the five-prompt spot check. Supervised fine-tuning taught the answer tags and slightly lowered exact match relative to the base model. DPO came back to the base rate. GRPO stayed with SFT. PPO is the worst of the five, which is what the repeated additions and the digit runs look like up close. At this width, with a few days of training, preference tuning and reinforcement learning did not produce a model that can do these problems. ufakzeka reported the same pattern at this size: preference tuning hurt chat. The table above is that result on this run.
-
-Base can still pick up a stray digit inside markup. The scorer will treat that digit as an answer, so a few of its 6 hits can be incidental. The spot check never showed base writing a worked solution.
-
-`models/sft.pt` is the checkpoint to talk to. `models/reward.pt` is only the linear reward head, not a generator.
-
 ## Reproduce
 
-Commands assume the shell is at the repository root and the virtualenv is active. This run used Python 3.12 and `torch==2.11.0+cu128`. Leave well over 50 GB free: the train file is about 12 GB of int32 tokens, each full checkpoint is about 1.9 GB because it stores Adam moments, and the Hugging Face cache sits beside both while the stream runs.
+Commands assume the shell is at the repository root and the virtualenv is active. This run used Python 3.12 and `torch==2.11.0+cu128`. Leave well over 50 GB free: the train file is about 12 GB of int32 tokens, each full checkpoint is about 1.9 GB.
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install torch numpy h5py regex datasets tqdm
-python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"
 ```
 
 ### Tokenizer
